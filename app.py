@@ -13,7 +13,12 @@ from datetime import datetime
 from flask import Flask, render_template, Response, jsonify, request
 from dotenv import load_dotenv
 import google.generativeai as genai
-from pyzbar import pyzbar
+try:
+    from pyzbar import pyzbar
+    HAS_PYZBAR = True
+except Exception as e:
+    print(f"[WARNING] 無法載入 pyzbar (缺少系統 zbar 庫): {e}")
+    HAS_PYZBAR = False
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
@@ -224,10 +229,15 @@ class VideoCamera:
             self.raw_frame = img.copy()
             
             # 本地端即時 QR Code / 一維條碼掃描
-            try:
-                gray = cv2.cvtColor(self.raw_frame, cv2.COLOR_BGR2GRAY)
-                barcodes = pyzbar.decode(gray)
-                for barcode in barcodes:
+            barcodes = []
+            if HAS_PYZBAR:
+                try:
+                    gray = cv2.cvtColor(self.raw_frame, cv2.COLOR_BGR2GRAY)
+                    barcodes = pyzbar.decode(gray)
+                except Exception:
+                    pass
+            
+            for barcode in barcodes:
                     barcode_data = barcode.data.decode("utf-8")
                     barcode_type = barcode.type
                     
@@ -262,8 +272,6 @@ class VideoCamera:
                                 
                         # 廣播辨識結果給前端
                         broadcast_result(info, self.fps, 0.0)
-            except Exception as scan_e:
-                pass
                 
             # 水平翻轉影像以提供使用者直覺的自拍鏡像流
             img = cv2.flip(img, 1)
@@ -494,37 +502,67 @@ def scan_barcode_frame():
         return jsonify({"error": "影像解碼失敗"}), 400
         
     try:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        barcodes = pyzbar.decode(gray)
-        for barcode in barcodes:
-            barcode_data = barcode.data.decode("utf-8")
-            barcode_type = barcode.type
-            
-            info = {
-                "not_found": False,
-                "is_qrcode": True,
-                "qrcode_data": barcode_data,
-                "qrcode_type": barcode_type,
-                "name": f"已掃描 {barcode_type}",
-                "category": "QR Code / 條碼快速掃描",
-                "brand": "本地解碼",
-                "dosage": barcode_data,
-                "time": "即時讀取",
-                "storage": "無特定"
-            }
-            
-            if barcode_data.strip().startswith('{') and barcode_data.strip().endswith('}'):
-                try:
-                    parsed = json.loads(barcode_data)
-                    info.update(parsed)
-                    info["is_qrcode"] = True
-                    info["qrcode_data"] = barcode_data
-                except Exception as json_e:
-                    print(f"[JSON Decode Error] QR Code JSON 解析失敗: {json_e}")
-            
-            # 廣播辨識結果給前端 (SSE)
-            broadcast_result(info, 0.0, 0.0)
-            return jsonify({"status": "success", "barcode_found": True, "data": info})
+        if HAS_PYZBAR:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            barcodes = pyzbar.decode(gray)
+            for barcode in barcodes:
+                barcode_data = barcode.data.decode("utf-8")
+                barcode_type = barcode.type
+                
+                info = {
+                    "not_found": False,
+                    "is_qrcode": True,
+                    "qrcode_data": barcode_data,
+                    "qrcode_type": barcode_type,
+                    "name": f"已掃描 {barcode_type}",
+                    "category": "QR Code / 條碼快速掃描",
+                    "brand": "本地解碼",
+                    "dosage": barcode_data,
+                    "time": "即時讀取",
+                    "storage": "無特定"
+                }
+                
+                if barcode_data.strip().startswith('{') and barcode_data.strip().endswith('}'):
+                    try:
+                        parsed = json.loads(barcode_data)
+                        info.update(parsed)
+                        info["is_qrcode"] = True
+                        info["qrcode_data"] = barcode_data
+                    except Exception as json_e:
+                        print(f"[JSON Decode Error] QR Code JSON 解析失敗: {json_e}")
+                
+                # 廣播辨識結果給前端 (SSE)
+                broadcast_result(info, 0.0, 0.0)
+                return jsonify({"status": "success", "barcode_found": True, "data": info})
+        else:
+            # 雲端 Linux 相容方案：使用 OpenCV 偵測二維碼 (QRCodeDetector)
+            try:
+                detector = cv2.QRCodeDetector()
+                barcode_data, bbox, _ = detector.detectAndDecode(img)
+                if barcode_data:
+                    info = {
+                        "not_found": False,
+                        "is_qrcode": True,
+                        "qrcode_data": barcode_data,
+                        "qrcode_type": "QRCODE",
+                        "name": "已掃描 QR Code",
+                        "category": "QR Code 快速掃描",
+                        "brand": "本地解碼 (OpenCV fallback)",
+                        "dosage": barcode_data,
+                        "time": "即時讀取",
+                        "storage": "無特定"
+                    }
+                    if barcode_data.strip().startswith('{') and barcode_data.strip().endswith('}'):
+                        try:
+                            parsed = json.loads(barcode_data)
+                            info.update(parsed)
+                        except Exception:
+                            pass
+                    
+                    broadcast_result(info, 0.0, 0.0)
+                    return jsonify({"status": "success", "barcode_found": True, "data": info})
+            except Exception as qr_e:
+                print(f"[QR Fallback Error] {qr_e}")
             
         return jsonify({"status": "success", "barcode_found": False})
     except Exception as e:
