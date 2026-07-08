@@ -766,7 +766,7 @@
               <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <select id="camera-source-select" onchange="switchCameraSource()" class="tag-btn" style="background: rgba(255,255,255,0.06); outline: none; border-color: rgba(255,255,255,0.15); color: var(--text-secondary); cursor: pointer; padding: 0.35rem 0.5rem;">
                   <option value="server">樹莓派 / 伺服器鏡頭</option>
-                  <option value="client">本機鏡頭 (手機 / 筆電)</option>
+                  <option value="client" selected>本機鏡頭 (手機 / 筆電)</option>
                 </select>
                 <button id="toggle-camera-facing-btn" onclick="toggleCameraFacing()" class="tag-btn" style="display: none; align-items: center; gap: 0.3rem;"><i class="fa-solid fa-camera-rotate"></i> 切換鏡頭</button>
                 <button onclick="openEmailSettings()" class="tag-btn" style="display: flex; align-items: center; gap: 0.3rem;"><i class="fa-solid fa-envelope"></i> 郵件通知</button>
@@ -987,7 +987,7 @@
     let activeStream = null;
     let cameraFacing = 'environment'; // 手機預設使用後置鏡頭
     let barcodeScanIntervalId = null;
-    let currentCameraSource = 'server'; // 'server' or 'client'
+    let currentCameraSource = 'client'; // 'server' or 'client' (預設為 client)
 
     // 切換相機來源
     function switchCameraSource() {
@@ -1123,6 +1123,9 @@
 
       // 讀取郵件通知設定
       loadEmailSettings();
+
+      // 預設切換為本機相機以啟用鏡頭
+      switchCameraSource();
 
       // 讀取本地資料庫 (history_images 下的 json 檔案) 以還原歷史紀錄
       fetch('/api/history')
