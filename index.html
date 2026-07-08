@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="銀髮族藥袋、藥品與 QR Code 即時影像辨識系統 - 提供安全用藥指引與服用警告">
+  <title>銀髮族藥袋藥品與 QR Code 即時辨識與安全監控系統</title>
+  
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons for a premium look -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* CSS Variables & Reset */
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 0%, #1a1b36 0%, #0d0e21 60%, #050510 100%);
+      --card-bg: rgba(22, 24, 47, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-glow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      
+      --color-primary: #6366f1; /* Indigo */
+      --color-cyan: #06b6d4;
+      --color-green: #10b981;
+      --color-warning: #f59e0b;
+      --color-danger: #ef4444;
+      
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      
+      --font-display: 'Outfit', 'Inter', sans-serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 2rem;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Container & Header */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 1.5rem;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .header-logo i {
+      font-size: 2.2rem;
+      background: linear-gradient(135deg, var(--color-cyan), var(--color-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.3));
+    }
+
+    .header-logo h1 {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #ffffff, var(--text-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.85rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--color-green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--color-green);
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1.1); box-shadow: 0 0 14px var(--color-green); }
+    }
+
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Glass Cards */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 1.25rem;
+      box-shadow: var(--card-glow);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(800px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(255,255,255,0.03), transparent 40%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Left Pane - Video & Scanner */
+    .video-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 Aspect Ratio */
+      background: #000;
+      border-radius: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+    }
+
+    .video-feed {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Scanning Laser Line Effect */
+    .scanner-laser {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, var(--color-cyan), transparent);
+      box-shadow: 0 0 15px var(--color-cyan);
+      animation: scan 4s linear infinite;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    @keyframes scan {
+      0% { top: 0%; }
+      50% { top: 100%; }
+      100% { top: 0%; }
+    }
+
+    /* Corner Target Reticles */
+    .target-box {
+      position: absolute;
+      top: 10%;
+      left: 10%;
+      width: 80%;
+      height: 80%;
+      border: 1px dashed rgba(6, 182, 212, 0.3);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .target-box::before, .target-box::after,
+    .target-box-inner::before, .target-box-inner::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-color: var(--color-cyan);
+      border-style: solid;
+      pointer-events: none;
+    }
+
+    .target-box::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-top-left-radius: 4px; }
+    .target-box::after { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-top-right-radius: 4px; }
+    
+    .target-box-inner {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+    .target-box-inner::before { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-bottom-left-radius: 4px; }
+    .target-box-inner::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-bottom-right-radius: 4px; }
+
+    /* Scan Hint Overlay */
+    .scan-hint {
+      position: absolute;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      padding: 0.4rem 1.2rem;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      z-index: 2;
+      color: var(--text-secondary);
+      backdrop-filter: blur(4px);
+    }
+
+    /* Right Pane - Info Display */
+    .info-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-height: 480px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Empty state card */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-grow: 1;
+      padding: 4rem 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      border: 2px dashed rgba(255, 255, 255, 0.05);
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.01);
+      transition: all 0.3s;
+    }
+
+    .empty-state i {
+      font-size: 3.5rem;
+      margin-bottom: 1.5rem;
+      color: rgba(99, 102, 241, 0.2);
+      animation: pulse-slow 3s infinite alternate;
+    }
+
+    @keyframes pulse-slow {
+      0% { transform: scale(1) translateY(0); color: rgba(99, 102, 241, 0.2); }
+      100% { transform: scale(1.05) translateY(-5px); color: rgba(6, 182, 212, 0.3); }
+    }
+
+    .empty-state p {
+      font-size: 0.95rem;
+      max-width: 280px;
+      line-height: 1.5;
+    }
+
+    /* Active Info Display (Hidden by default, shown when barcode detected) */
+    .product-details {
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+      animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .category-badge {
+      align-self: flex-start;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.2));
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #38bdf8;
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .product-header {
+      margin-bottom: 0.5rem;
+    }
+
+    .brand-name {
+      font-size: 0.9rem;
+      color: var(--color-cyan);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .product-name {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 0.2rem;
+      line-height: 1.3;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .info-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .info-card i {
+      font-size: 1.25rem;
+      color: var(--color-cyan);
+      margin-top: 0.1rem;
+      width: 24px;
+      text-align: center;
+    }
+
+    .info-card-content h4 {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+
+    .info-card-content p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* Warning Alert Cards (Important for seniors!) */
+    .warning-section {
+      margin-top: 0.5rem;
+    }
+
+    .warning-card {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.05) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      display: flex;
+      gap: 0.75rem;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.05);
+      animation: pulse-red 2s infinite alternate;
+    }
+
+    @keyframes pulse-red {
+      0% { border-color: rgba(239, 68, 68, 0.25); }
+      100% { border-color: rgba(239, 68, 68, 0.45); }
+    }
+
+    .warning-card i {
+      font-size: 1.4rem;
+      color: var(--accent-red);
+      animation: rotate-shake 1.5s infinite;
+    }
+
+    @keyframes rotate-shake {
+      0%, 100% { transform: rotate(0); }
+      10%, 30%, 50%, 70%, 90% { transform: rotate(-5deg); }
+      20%, 40%, 60%, 80% { transform: rotate(5deg); }
+    }
+
+    .warning-card-content h4 {
+      font-size: 0.9rem;
+      color: #fca5a5;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .warning-card-content ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .warning-card-content li {
+      font-size: 0.88rem;
+      color: #fecdd3;
+      line-height: 1.5;
+      margin-bottom: 0.25rem;
+      position: relative;
+      padding-left: 1rem;
+    }
+
+    .warning-card-content li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--color-danger);
+    }
+
+    /* History & Control Panels (Bottom Row) */
+    .bottom-section {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 1024px) {
+      .bottom-section {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* History Log Table */
+    .history-card {
+      min-height: 250px;
+    }
+
+    .history-table-wrapper {
+      max-height: 180px;
+      overflow-y: auto;
+      margin-top: 0.5rem;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    .history-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 0.75rem 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .history-table td {
+      padding: 0.75rem 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      color: var(--text-secondary);
+    }
+
+    .history-table tr {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .history-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .history-table tr:active {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .history-time {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .history-badge {
+      display: inline-block;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--color-green);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .history-thumb {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+
+    .history-thumb:hover {
+      transform: scale(1.1);
+    }
+
+    /* Lightbox Styles */
+    .lightbox-overlay {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(5px);
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .lightbox-content {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 12px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+      animation: zoomIn 0.2s ease-out;
+    }
+    
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 35px;
+      color: white;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    
+    .lightbox-close:hover {
+      color: var(--color-cyan);
+    }
+    
+    @keyframes zoomIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* Manual Tester Tool */
+    .tester-card {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .styled-input {
+      flex-grow: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      color: white;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .styled-input:focus {
+      outline: none;
+      border-color: var(--color-cyan);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, var(--color-cyan), var(--color-primary));
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-action:active {
+      transform: translateY(1px);
+    }
+
+    .shortcuts-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .tag-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tag-btn:hover {
+      background: rgba(6, 182, 212, 0.1);
+      border-color: var(--color-cyan);
+      color: white;
+    }
+
+    /* Footer styling */
+    footer {
+      text-align: center;
+      margin-top: 4rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.03);
+      padding-top: 2rem;
+    }
+    /* Toast Notification styles */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 11000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .toast {
+      background: rgba(99, 102, 241, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+      animation: toast-in 0.3s ease-out;
+      backdrop-filter: blur(10px);
+    }
+    @keyframes toast-in {
+      from { transform: translateY(100%) scale(0.9); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-container" id="toast-container"></div>
+
+  <div class="container">
+    <header>
+      <div class="header-logo">
+        <i class="fa-solid fa-prescription-bottle-medical"></i>
+        <h1>銀髮族藥袋藥品與 QR Code 即時辨識監控</h1>
+      </div>
+      <div class="system-status">
+        <span class="status-dot"></span>
+        <span id="status-text">系統連線中...</span>
+        <span style="margin-left: 10px; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.2); font-family: monospace; display: none;" id="perf-metrics">
+          <i class="fa-solid fa-gauge-high" style="color: var(--color-cyan);"></i> FPS: <span id="perf-fps">--</span> | 推論: <span id="perf-time">--</span> ms
+        </span>
+      </div>
+    </header>
+
+    <div class="dashboard-grid">
+      <!-- Left Column -->
+      <div class="left-column" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Camera Stream -->
+        <section class="video-section">
+          <div class="glass-card">
+            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <i class="fa-solid fa-camera" style="color: var(--color-cyan)"></i>
+                即時辨識影像流 (藥品/藥袋/QR Code)
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <select id="camera-source-select" onchange="switchCameraSource()" class="tag-btn" style="background: rgba(255,255,255,0.06); outline: none; border-color: rgba(255,255,255,0.15); color: var(--text-secondary); cursor: pointer; padding: 0.35rem 0.5rem;">
+                  <option value="server">樹莓派 / 伺服器鏡頭</option>
+                  <option value="client" selected>本機鏡頭 (手機 / 筆電)</option>
+                </select>
+                <button id="toggle-camera-facing-btn" onclick="toggleCameraFacing()" class="tag-btn" style="display: none; align-items: center; gap: 0.3rem;"><i class="fa-solid fa-camera-rotate"></i> 切換鏡頭</button>
+                <button onclick="openEmailSettings()" class="tag-btn" style="display: flex; align-items: center; gap: 0.3rem;"><i class="fa-solid fa-envelope"></i> 郵件通知</button>
+                <button onclick="openCameraSettings()" class="tag-btn" style="display: flex; align-items: center; gap: 0.3rem;"><i class="fa-solid fa-gear"></i> 鏡頭設定</button>
+              </div>
+            </div>
+            
+            <div class="video-container" id="video-wrapper">
+              <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span id="status-text">連線中...</span>
+              </div>
+              <!-- 這裡放置即時影像 -->
+              <img src="/video_feed" alt="Video Stream" class="video-feed" id="live-video" onerror="handleVideoError(this)" crossorigin="anonymous">
+              <!-- 前端本機相機播放器 -->
+              <video id="client-video" class="video-feed" style="display: none;" autoplay playsinline muted></video>
+              <!-- 用於凍結畫面的 Canvas -->
+              <canvas id="snapshot-canvas" class="video-feed" style="display: none;"></canvas>
+              <!-- 隱藏的 Canvas 用於擷取條碼掃描影格 -->
+              <canvas id="barcode-canvas" style="display: none;"></canvas>
+              <div class="scanner-laser"></div>
+              
+              <div class="scan-hint">
+                <i class="fa-solid fa-qrcode fa-spin-slow"></i>
+                <span>請將藥品、藥袋或 QR Code 置於鏡頭前</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- History Logs (Moved to left column) -->
+        <div class="glass-card history-card">
+          <div class="section-title">
+            <i class="fa-solid fa-history" style="color: var(--color-green)"></i>
+            今天辨識歷史紀錄 <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: auto;">(已自動儲存至 history.csv)</span>
+          </div>
+          <div class="history-table-wrapper">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>時間</th>
+                  <th>保健品名稱</th>
+                  <th>辨識圖片</th>
+                  <th>狀態</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody">
+                <!-- Rows will be added dynamically by JS -->
+                <tr id="history-placeholder">
+                  <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">
+                    今日尚無辨識紀錄。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="right-column" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        
+        <!-- Gemini AI Trigger Button (Moved to top of right column) -->
+        <div class="glass-card tester-card" style="display: flex; justify-content: center; align-items: center; min-height: 200px;">
+          <div style="text-align: center; width: 100%;">
+            <div class="section-title" style="justify-content: center; border-bottom: none; margin-bottom: 1rem;">
+              <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--color-primary)"></i>
+              雲端多模態 AI 辨識
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+              請將藥品、藥盒或醫院藥袋置於鏡頭前（距離約30-40cm保持清晰），點擊下方按鈕進行 AI 辨識。
+            </p>
+            <button id="gemini-btn" class="btn-action" style="margin: 0 auto; font-size: 1.1rem; padding: 1rem 2rem; border-radius: 50px; width: 80%; justify-content: center;" onclick="triggerGeminiScan()">
+              <i class="fa-solid fa-camera-retro"></i> ✨ 拍攝並進行 AI 辨識
+            </button>
+            <div id="gemini-loading" style="display: none; margin-top: 1rem; color: var(--color-cyan);">
+              <i class="fa-solid fa-circle-notch fa-spin"></i> 影像分析中，請稍候 (約需 3-5 秒)...
+            </div>
+          </div>
+        </div>
+
+        <!-- Recognition Details -->
+        <section class="info-section glass-card">
+        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div>
+            <i class="fa-solid fa-circle-info" style="color: var(--color-primary)"></i>
+            安全服用指引卡
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+            <button id="tts-btn" class="tag-btn" onclick="playActiveProductTTS()" style="display: flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.6rem; background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); color: white;">
+              <i class="fa-solid fa-volume-high"></i> 播放語音
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty state, shown when no barcode scanned -->
+        <div class="empty-state" id="info-empty">
+          <i class="fa-solid fa-prescription-bottle-medical"></i>
+          <h3>等待辨識...</h3>
+          <p>請將藥品或醫院藥袋置於鏡頭前拍照，或直接對準 QR Code 進行自動掃描。</p>
+        </div>
+
+        <!-- Detailed Product Information (Dynamically Rendered) -->
+        <div class="product-details" id="info-details">
+          <span class="category-badge" id="prod-category">心血管保健</span>
+          
+          <div class="product-header">
+            <div class="brand-name" id="prod-brand">健康優選</div>
+            <h2 class="product-name" id="prod-name">深海魚油軟膠囊</h2>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-card">
+              <i class="fa-solid fa-capsules"></i>
+              <div class="info-card-content">
+                <h4>每次服用劑量</h4>
+                <p id="prod-dosage">每日 2 粒，建議隨餐或飯後服用</p>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <i class="fa-solid fa-clock"></i>
+              <div class="info-card-content">
+                <h4>建議服用時間</h4>
+                <p id="prod-time">建議於【早餐或晚餐後】服用，吸收效果更佳</p>
+              </div>
+            </div>
+
+            <div class="info-card">
+              <i class="fa-solid fa-box-archive"></i>
+              <div class="info-card-content">
+                <h4>保存方式</h4>
+                <p id="prod-storage">請置於陰涼乾燥處，避免陽光直射</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert warning region (highly dynamic) -->
+          <div class="warning-section" id="prod-warning-wrapper">
+            <div class="warning-card">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <div class="warning-card-content">
+                <h4>⚠️ 銀髮用藥安全警告</h4>
+                <ul id="prod-warnings">
+                  <li>請勿與抗凝血劑（如阿斯匹靈、華法林）同時服用。</li>
+                  <li>若近期有手術安排，請先暫停服用並諮詢醫師。</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      </div>
+    </div>
+
+    <footer>
+      <p>智慧製造實務課程專案 - 老人保健品影像與條碼即時偵測系統 © 2026</p>
+    </footer>
+  </div>
+
+  <!-- Lightbox for Image Preview -->
+  <div id="image-lightbox" class="lightbox-overlay" onclick="closeLightbox()">
+    <span class="lightbox-close">&times;</span>
+    <img id="lightbox-img" class="lightbox-content">
+  </div>
+
+  <!-- Camera Settings Modal -->
+  <div id="camera-settings-modal" class="lightbox-overlay" style="align-items: center; justify-content: center; z-index: 10000;">
+    <div class="glass-card" style="min-width: 350px; padding: 2rem; border: 1px solid rgba(255,255,255,0.2);">
+      <h3 style="margin-top: 0; color: var(--color-cyan);"><i class="fa-solid fa-network-wired"></i> 設定樹莓派網路鏡頭</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;">請輸入樹莓派的影像串流網址 (例如 <code>tcp://192.168.x.x:8000</code> 或 <code>http://...</code>)。<br>若留白則自動恢復使用本機 USB 鏡頭。</p>
+      
+      <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label for="camera-url-input">鏡頭串流網址 (URL)</label>
+        <input type="text" id="camera-url-input" class="styled-input" style="width: 100%; box-sizing: border-box;" placeholder="例如: tcp://192.168.50.100:8000">
+      </div>
+      
+      <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button onclick="closeCameraSettings()" class="tag-btn" style="padding: 0.6rem 1.2rem; font-size: 0.95rem;">取消</button>
+        <button onclick="saveCameraSettings()" class="btn-action" style="padding: 0.6rem 1.2rem; font-size: 0.95rem;" id="camera-save-btn">連線</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Settings Modal -->
+  <div id="email-settings-modal" class="lightbox-overlay" style="align-items: center; justify-content: center; z-index: 10000;">
+    <div class="glass-card" style="min-width: 380px; padding: 2rem; border: 1px solid rgba(255,255,255,0.2);">
+      <h3 style="margin-top: 0; color: var(--color-cyan);"><i class="fa-solid fa-envelope"></i> 📧 家人用藥郵件通知設定</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5;">當長輩辨識藥物成功時，系統會自動發送通知信給指定的家人信箱。<br><span id="email-credentials-warning" style="color: var(--color-warning); font-size: 0.8rem; display: none;">⚠️ 尚未設定發件伺服器帳密，僅能以虛擬模式模擬</span></p>
+      
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label for="email-receiver-input">家人收件信箱 (Email)</label>
+        <input type="email" id="email-receiver-input" class="styled-input" style="width: 100%; box-sizing: border-box;" placeholder="例如: family@gmail.com">
+      </div>
+      
+      <div class="form-group" style="margin-bottom: 1.5rem; flex-direction: row; align-items: center; gap: 0.5rem; display: flex;">
+        <input type="checkbox" id="email-autosend-input" style="width: 18px; height: 18px; accent-color: var(--color-cyan); cursor: pointer; margin-bottom: 0;">
+        <label for="email-autosend-input" style="cursor: pointer; margin-bottom: 0; color: var(--text-secondary);">當辨識成功時自動發送通知郵件</label>
+      </div>
+      
+      <div style="display: flex; gap: 1rem; justify-content: flex-end; align-items: center;">
+        <button onclick="sendTestEmail()" class="tag-btn" style="padding: 0.6rem 1rem; font-size: 0.9rem; display: flex; align-items: center; gap: 0.2rem;"><i class="fa-solid fa-paper-plane"></i> 發送測試信</button>
+        <div style="flex-grow: 1;"></div>
+        <button onclick="closeEmailSettings()" class="tag-btn" style="padding: 0.6rem 1.2rem; font-size: 0.95rem;">取消</button>
+        <button onclick="saveEmailSettings()" class="btn-action" style="padding: 0.6rem 1.2rem; font-size: 0.95rem;" id="email-save-btn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // System variables
+    let isCameraRunning = true;
+    let localDatabase = {};
+    let activeProductData = null; // 儲存當前辨識到的資料，用於語音朗讀
+
+    // 前端本機鏡頭支援相關變數
+    let activeStream = null;
+    let cameraFacing = 'environment'; // 手機預設使用後置鏡頭
+    let barcodeScanIntervalId = null;
+    let currentCameraSource = 'client'; // 'server' or 'client' (預設為 client)
+
+    // 切換相機來源
+    function switchCameraSource() {
+      const select = document.getElementById('camera-source-select');
+      const facingBtn = document.getElementById('toggle-camera-facing-btn');
+      const liveVideo = document.getElementById('live-video');
+      const clientVideo = document.getElementById('client-video');
+      
+      currentCameraSource = select.value;
+      retakePhoto(); // 先復原快照狀態
+      
+      if (currentCameraSource === 'server') {
+        facingBtn.style.display = 'none';
+        clientVideo.style.display = 'none';
+        liveVideo.style.display = 'block';
+        
+        stopClientCamera();
+        
+        // 重新載入後端影像流
+        liveVideo.src = "/video_feed?" + new Date().getTime();
+        document.getElementById('status-text').innerText = "系統就緒 (已連線)";
+      } else {
+        facingBtn.style.display = 'inline-flex';
+        liveVideo.style.display = 'none';
+        clientVideo.style.display = 'block';
+        
+        startClientCamera();
+      }
+    }
+
+    // 啟動本機相機
+    function startClientCamera() {
+      stopClientCamera();
+      
+      const clientVideo = document.getElementById('client-video');
+      const constraints = {
+        video: {
+          facingMode: cameraFacing,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+      
+      document.getElementById('status-text').innerText = "正在啟動相機...";
+      
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+          activeStream = stream;
+          clientVideo.srcObject = stream;
+          clientVideo.play();
+          
+          document.getElementById('status-text').innerText = "本機鏡頭運作中";
+          
+          // 啟動每秒一次的條碼影像擷取傳送
+          barcodeScanIntervalId = setInterval(captureBarcodeFrame, 1000);
+        })
+        .catch(err => {
+          console.error("無法開啟本機相機: ", err);
+          document.getElementById('status-text').innerText = "無法開啟本機相機";
+          showToast("無法開啟相機，請檢查瀏覽器權限或是否已被其他程式佔用。", "error");
+        });
+    }
+
+    // 停止本機相機
+    function stopClientCamera() {
+      if (barcodeScanIntervalId) {
+        clearInterval(barcodeScanIntervalId);
+        barcodeScanIntervalId = null;
+      }
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+        activeStream = null;
+      }
+      const clientVideo = document.getElementById('client-video');
+      if (clientVideo) {
+        clientVideo.srcObject = null;
+      }
+    }
+
+    // 切換前後鏡頭
+    function toggleCameraFacing() {
+      cameraFacing = (cameraFacing === 'user') ? 'environment' : 'user';
+      showToast(`已切換為 ${cameraFacing === 'user' ? '前置自拍' : '後置主'} 鏡頭`, "info");
+      if (currentCameraSource === 'client') {
+        startClientCamera();
+      }
+    }
+
+    // 定時擷取本機相機影格，傳送至後端進行實時條碼辨識
+    function captureBarcodeFrame() {
+      if (currentCameraSource !== 'client' || !activeStream) return;
+      
+      const video = document.getElementById('client-video');
+      const canvas = document.getElementById('barcode-canvas');
+      if (!video || !canvas) return;
+      
+      if (video.videoWidth === 0 || video.videoHeight === 0) return;
+      
+      const ctx = canvas.getContext('2d');
+      // 將解析度適度縮小以節省上傳頻寬
+      canvas.width = 480;
+      canvas.height = 360;
+      
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      
+      fetch('/api/scan_barcode_frame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.barcode_found && data.data) {
+          displayProduct(data.data);
+          addToHistory(data.data);
+        }
+      })
+      .catch(err => console.error("條碼影格上傳失敗: ", err));
+    }
+
+    // Initial Load
+    document.addEventListener("DOMContentLoaded", () => {
+      // Setup cursor glow effect on cards
+      setupCardGlow();
+      
+      // Connection check
+      document.getElementById('status-text').innerText = "系統就緒 (已連線)";
+
+      // Start listening to real-time scanning events from backend via SSE
+      startEventListener();
+
+      // 讀取郵件通知設定
+      loadEmailSettings();
+
+      // 預設切換為本機相機以啟用鏡頭
+      switchCameraSource();
+
+      // 讀取本地資料庫 (history_images 下的 json 檔案) 以還原歷史紀錄
+      fetch('/api/history')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            data.forEach(item => addToHistory(item));
+          }
+        })
+        .catch(err => console.error("Error fetching local history:", err));
+    });
+
+    // Setup mouse movement glow effect on glass cards
+    function setupCardGlow() {
+      const cards = document.querySelectorAll('.glass-card');
+      cards.forEach(card => {
+        card.addEventListener('mousemove', e => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          card.style.setProperty('--mouse-x', `${x}px`);
+          card.style.setProperty('--mouse-y', `${y}px`);
+        });
+      });
+    }
+
+    // Handle video feed loading failure
+    function handleVideoError(img) {
+      isCameraRunning = false;
+      const videoWrapper = document.getElementById('video-wrapper');
+      
+      // Replace with beautiful placeholder
+      videoWrapper.innerHTML = `
+        <div style="position: absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#111; border-radius: 1rem; color: var(--text-muted);">
+          <i class="fa-solid fa-video-slash" style="font-size: 3rem; margin-bottom:1rem; color: var(--color-danger)"></i>
+          <p style="font-size: 0.95rem; margin-bottom: 0.25rem;">無法取得鏡頭影像流</p>
+          <span style="font-size: 0.8rem; opacity: 0.6;">(請確認樹莓派已連接羅技鏡頭，或程式正佔用鏡頭)</span>
+        </div>
+      `;
+      document.getElementById('status-text').innerHTML = "系統運作中 (鏡頭未啟用)";
+    }
+
+    // SSE Event Listener for real-time pushed barcodes
+    function startEventListener() {
+      const source = new EventSource('/api/events');
+      
+      source.onmessage = function(event) {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && Object.keys(data).length > 0) {
+            displayProduct(data);
+            addToHistory(data);
+          }
+        } catch (e) {
+          console.error("Error parsing event stream data", e);
+        }
+      };
+
+      source.onerror = function(err) {
+        console.warn("EventSource failed, attempting to reconnect...", err);
+        // Will automatically reconnect
+      };
+    }
+
+    // Update UI Card with Product details
+    function displayProduct(data) {
+      const emptyDiv = document.getElementById('info-empty');
+      const detailsDiv = document.getElementById('info-details');
+      
+      if (data.not_found) {
+        // Handle barcode not registered
+        emptyDiv.style.display = 'none';
+        detailsDiv.style.display = 'flex';
+        
+        document.getElementById('prod-category').innerText = "辨識失敗";
+        document.getElementById('prod-category').style.borderColor = "var(--color-danger)";
+        document.getElementById('prod-category').style.color = "var(--color-danger)";
+        document.getElementById('prod-category').style.background = "rgba(239, 68, 68, 0.1)";
+        
+        document.getElementById('prod-brand').innerText = "AI 辨識結果";
+        document.getElementById('prod-name').innerText = "未偵測到藥袋或藥品";
+        
+        document.getElementById('prod-dosage').innerText = "無相關資料。";
+        document.getElementById('prod-time').innerText = "無相關資料。";
+        document.getElementById('prod-storage').innerText = "無相關資料。";
+        
+        // Show warnings
+        document.getElementById('prod-warning-wrapper').innerHTML = `
+          <div class="warning-card" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2)">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--color-danger)"></i>
+            <div class="warning-card-content">
+              <h4 style="color: #fca5a5;">⚠️ 無法辨識包裝特徵</h4>
+              <p style="font-size: 0.88rem; color: #fecdd3; line-height: 1.4; margin-top: 0.2rem;">
+                畫面太模糊，或者無法辨識包裝上的文字。請將藥袋正面大字或藥盒對準鏡頭（距離保持30-40cm），再重新拍攝一次。
+              </p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      // QR Code scan check (if plain text)
+      if (data.is_qrcode && data.brand === "本地解碼") {
+        emptyDiv.style.display = 'none';
+        detailsDiv.style.display = 'flex';
+        
+        document.getElementById('prod-category').innerText = "QR Code / 條碼";
+        document.getElementById('prod-category').style.borderColor = "var(--color-cyan)";
+        document.getElementById('prod-category').style.color = "var(--color-cyan)";
+        document.getElementById('prod-category').style.background = "rgba(6, 182, 212, 0.1)";
+        
+        document.getElementById('prod-brand').innerText = data.brand;
+        document.getElementById('prod-name').innerText = data.qrcode_type || "解碼內容";
+        
+        document.getElementById('prod-dosage').innerText = data.dosage || "無文字資料";
+        document.getElementById('prod-time').innerText = "本地即時解碼";
+        document.getElementById('prod-storage').innerText = "無";
+        
+        // Show QR data in warning section as raw data display
+        document.getElementById('prod-warning-wrapper').innerHTML = `
+          <div class="warning-card" style="background: rgba(6, 182, 212, 0.08); border-color: rgba(6, 182, 212, 0.2)">
+            <i class="fa-solid fa-qrcode" style="color: var(--color-cyan); animation: none;"></i>
+            <div class="warning-card-content">
+              <h4 style="color: #cbd5e1;">ℹ️ 掃描解碼資訊</h4>
+              <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.4; margin-top: 0.2rem;">
+                這是一個一維條碼或 QR Code。原始解碼數據如下：<br>
+                <code style="word-break: break-all; background: rgba(0,0,0,0.3); padding: 0.2rem; border-radius: 4px; font-family: monospace;">${data.qrcode_data}</code>
+              </p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Normal Registered Product Found
+      emptyDiv.style.display = 'none';
+      detailsDiv.style.display = 'flex';
+      
+      // Update fields
+      document.getElementById('prod-category').innerText = data.category || "一般保健";
+      document.getElementById('prod-category').removeAttribute('style'); // reset dynamic style if any
+      document.getElementById('prod-brand').innerText = data.brand || "未知品牌";
+      document.getElementById('prod-name').innerText = data.name || "未命名商品";
+      document.getElementById('prod-dosage').innerText = data.dosage || "依產品說明服用";
+      document.getElementById('prod-time').innerText = data.time || "無特定時間";
+      document.getElementById('prod-storage').innerText = data.storage || "置於陰涼乾燥處";
+      
+      // Update perf metrics if available
+      if (data.fps !== undefined && data.inference_time_ms !== undefined) {
+        document.getElementById('perf-metrics').style.display = 'inline-block';
+        document.getElementById('perf-fps').innerText = data.fps;
+        document.getElementById('perf-time').innerText = data.inference_time_ms;
+      }
+      
+      // Load Warnings
+      const warningsList = document.getElementById('prod-warnings');
+      warningsList.innerHTML = '';
+      
+      // Render standard warnings template
+      document.getElementById('prod-warning-wrapper').innerHTML = `
+        <div class="warning-card">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <div class="warning-card-content">
+            <h4>⚠️ 銀髮用藥安全警告</h4>
+            <ul id="prod-warnings"></ul>
+          </div>
+        </div>
+      `;
+      
+      const newWarningsList = document.getElementById('prod-warnings');
+      if (data.warnings && data.warnings.length > 0) {
+        data.warnings.forEach(warn => {
+          const li = document.createElement('li');
+          li.innerText = warn;
+          newWarningsList.appendChild(li);
+        });
+      } else {
+        const li = document.createElement('li');
+        li.innerText = "一般食品，目前無特殊交互作用警告。請遵照每日建議劑量服用。";
+        newWarningsList.appendChild(li);
+      }
+      
+      activeProductData = data; // 儲存當前資料供重新朗讀使用
+      
+      // 自動朗讀與郵件通知功能 (若非失敗狀態)
+      if (!data.not_found) {
+        setTimeout(() => {
+          speakProduct(data);
+        }, 500);
+        
+        // 顯示與執行自動發送郵件 (避免信箱衝突，改由前端瀏覽器發送至個人的 localStorage 信箱)
+        const receiver = localStorage.getItem('email_receiver') || '';
+        const autosend = localStorage.getItem('email_autosend') === 'true';
+        if (autosend && receiver && !data.not_found) {
+          // 避免本地解碼條碼發送無效信件
+          if (!(data.is_qrcode && data.brand === "本地解碼")) {
+            const emailData = Object.assign({}, data, { receiver_email: receiver });
+            fetch('/api/send_email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(emailData)
+            })
+            .then(res => res.json())
+            .then(resData => {
+              if (resData.error) {
+                console.error("自動發送郵件失敗:", resData.error);
+                showToast(`自動發信失敗: ${resData.error}`, "error");
+              } else {
+                showToast(`已為您自動發送用藥通知信至 ${receiver}`, "success");
+              }
+            })
+            .catch(err => console.error("自動發信錯誤:", err));
+          }
+        }
+      }
+    }
+
+    // Add Scanned Code to Table History
+    function addToHistory(data) {
+      const tbody = document.getElementById('history-tbody');
+      const placeholder = document.getElementById('history-placeholder');
+      
+      if (placeholder) {
+        placeholder.remove();
+      }
+      
+      // 使用歷史紀錄原本的時間，如果沒有則使用當前時間
+      const timeStr = data.time_str || new Date().toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const row = document.createElement('tr');
+      
+      // Store complete object on the element for click retrieval
+      row.dataset.product = JSON.stringify(data);
+      row.onclick = function() {
+        const prodData = JSON.parse(this.dataset.product);
+        displayProduct(prodData);
+      };
+      
+      let nameText = "";
+      let badgeText = "";
+      
+      if (data.not_found) {
+        nameText = `<span style="color: var(--color-danger)">辨識失敗</span>`;
+        badgeText = `<span class="history-badge" style="background: rgba(239, 68, 68, 0.15); color: var(--color-danger); border-color: rgba(239, 68, 68, 0.2)">失敗</span>`;
+      } else if (data.is_qrcode) {
+        nameText = `<span style="color: var(--color-cyan)">[QR Code]</span> ` + (data.brand === "本地解碼" ? data.dosage : (data.brand + " " + data.name));
+        badgeText = `<span class="history-badge" style="background: rgba(6, 182, 212, 0.15); color: var(--color-cyan); border-color: rgba(6, 182, 212, 0.2)">QR Code</span>`;
+      } else {
+        nameText = data.brand + " " + data.name;
+        badgeText = `<span class="history-badge">已讀取</span>`;
+      }
+      
+      const thumbHtml = data.image_url 
+        ? `<img src="${data.image_url}" alt="縮圖" class="history-thumb" onclick="openLightbox('${data.image_url}', event)">`
+        : `<span style="color: var(--text-muted); font-size: 0.8rem;">無圖片</span>`;
+      
+      row.innerHTML = `
+        <td class="history-time">${timeStr}</td>
+        <td><strong>${nameText}</strong></td>
+        <td style="text-align: center;">${thumbHtml}</td>
+        <td>${badgeText}</td>
+      `;
+      
+      // Insert at the top
+      tbody.insertBefore(row, tbody.firstChild);
+      
+      // Limit to 10 records to avoid page bloat
+      if (tbody.children.length > 10) {
+        tbody.removeChild(tbody.lastChild);
+      }
+    }
+    // Trigger Gemini API scan
+    function triggerGeminiScan() {
+      const btn = document.getElementById('gemini-btn');
+      const loading = document.getElementById('gemini-loading');
+      const serverVideo = document.getElementById('live-video');
+      const clientVideo = document.getElementById('client-video');
+      const canvas = document.getElementById('snapshot-canvas');
+      
+      const activeVideoElement = (currentCameraSource === 'server') ? serverVideo : clientVideo;
+      
+      // 凍結畫面
+      if (activeVideoElement && canvas) {
+        const ctx = canvas.getContext('2d');
+        canvas.width = activeVideoElement.videoWidth || activeVideoElement.naturalWidth || 640;
+        canvas.height = activeVideoElement.videoHeight || activeVideoElement.naturalHeight || 480;
+        ctx.drawImage(activeVideoElement, 0, 0, canvas.width, canvas.height);
+        
+        serverVideo.style.display = 'none';
+        clientVideo.style.display = 'none';
+        canvas.style.display = 'block';
+      }
+      
+      btn.style.display = 'none';
+      loading.style.display = 'block';
+      
+      if (currentCameraSource === 'client') {
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        
+        fetch('/api/gemini_scan_frame', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataUrl })
+        })
+        .then(response => response.json())
+        .then(data => {
+          loading.style.display = 'none';
+          if (data.error) {
+            alert(data.error);
+            retakePhoto();
+          } else {
+            btn.style.display = 'flex';
+            btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 🔄 重新拍攝';
+            btn.onclick = retakePhoto;
+            btn.style.background = 'rgba(255,255,255,0.06)';
+            btn.style.color = 'var(--text-primary)';
+          }
+        })
+        .catch(err => {
+          console.error("Gemini frame scan error", err);
+          alert("無法連線至後端伺服器！");
+          loading.style.display = 'none';
+          retakePhoto();
+        });
+      } else {
+        fetch('/api/gemini_scan', { method: 'POST' })
+          .then(response => response.json())
+          .then(data => {
+            loading.style.display = 'none';
+            if (data.error) {
+              alert(data.error);
+              retakePhoto();
+            } else {
+              btn.style.display = 'flex';
+              btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> 🔄 重新拍攝';
+              btn.onclick = retakePhoto;
+              btn.style.background = 'rgba(255,255,255,0.06)';
+              btn.style.color = 'var(--text-primary)';
+            }
+          })
+          .catch(err => {
+            console.error("Gemini scan error", err);
+            alert("無法連線至後端伺服器或發生錯誤！");
+            loading.style.display = 'none';
+            retakePhoto();
+          });
+      }
+    }
+
+    // Retake photo (unfreeze)
+    function retakePhoto() {
+      const btn = document.getElementById('gemini-btn');
+      const serverVideo = document.getElementById('live-video');
+      const clientVideo = document.getElementById('client-video');
+      const canvas = document.getElementById('snapshot-canvas');
+      
+      // 恢復即時畫面
+      if (serverVideo && clientVideo && canvas) {
+        if (currentCameraSource === 'server') {
+          serverVideo.style.display = 'block';
+          clientVideo.style.display = 'none';
+        } else {
+          serverVideo.style.display = 'none';
+          clientVideo.style.display = 'block';
+        }
+        canvas.style.display = 'none';
+      }
+      
+      // 恢復按鈕原本的狀態
+      btn.innerHTML = '<i class="fa-solid fa-camera-retro"></i> ✨ 拍攝並進行 AI 辨識';
+      btn.onclick = triggerGeminiScan;
+      btn.style.background = 'linear-gradient(135deg, var(--color-cyan), var(--color-primary))';
+      btn.style.color = 'white';
+    }
+
+    // Lightbox functions
+    function openLightbox(url, event) {
+      if (event) event.stopPropagation(); // 阻止觸發整行點擊事件
+      const lightbox = document.getElementById('image-lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      lightboxImg.src = url;
+      lightbox.style.display = 'flex';
+    }
+
+    function closeLightbox() {
+      const lightbox = document.getElementById('image-lightbox');
+      lightbox.style.display = 'none';
+    }
+
+    // Camera Settings Modal Functions
+    function openCameraSettings() {
+      document.getElementById('camera-settings-modal').style.display = 'flex';
+    }
+
+    function closeCameraSettings() {
+      document.getElementById('camera-settings-modal').style.display = 'none';
+    }
+
+    function saveCameraSettings() {
+      const url = document.getElementById('camera-url-input').value;
+      const btn = document.getElementById('camera-save-btn');
+      btn.innerText = "連線中...";
+      
+      fetch('/api/settings/camera', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url })
+      })
+      .then(res => res.json())
+      .then(data => {
+        closeCameraSettings();
+        btn.innerText = "連線";
+        document.getElementById('status-text').innerText = "切換鏡頭中...";
+        
+        // Force reload the video feed image
+        setTimeout(() => {
+          const video = document.getElementById('live-video');
+          video.src = "/video_feed?" + new Date().getTime();
+          video.style.display = 'block';
+          document.getElementById('snapshot-canvas').style.display = 'none';
+          document.getElementById('status-text').innerText = "系統就緒 (已連線)";
+        }, 1500);
+      })
+      .catch(err => {
+        console.error(err);
+        btn.innerText = "連線";
+        alert("設定失敗，請確認伺服器狀態。");
+      });
+    }
+
+    // Chrome requires voiceschanged event to populate voices list
+    window.speechSynthesis.onvoiceschanged = () => {
+      // Pre-populates voice cache in browser
+    };
+
+    // Play TTS for active product
+    function playActiveProductTTS() {
+      if (!activeProductData) {
+        alert("尚無可播放的辨識紀錄。");
+        return;
+      }
+      speakProduct(activeProductData);
+    }
+
+    // SpeechSynthesis core function
+    function speakProduct(data) {
+      if (!data || data.not_found) return;
+      
+      let name = data.name || "";
+      let category = data.category || "";
+      let time = data.time || "無特定時間";
+      let dosage = data.dosage || "依說明服用";
+      
+      // Clean up punctuation for clean speech flow
+      name = name.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').trim();
+      category = category.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').trim();
+      time = time.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').trim();
+      dosage = dosage.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').trim();
+      
+      // Cancel current speech to prevent overlapping
+      window.speechSynthesis.cancel();
+      
+      // Find voices
+      const voices = window.speechSynthesis.getVoices();
+      let selectedVoice = voices.find(v => v.lang.includes('zh-TW')) || 
+                          voices.find(v => v.lang.includes('zh'));
+      
+      let text = `這是吃 ${name}。用途是 ${category}。服用時間是 ${time}。服用量是 ${dosage}。`;
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+      
+      utterance.rate = 0.75; // Slower rate (0.75) for elderly clarity
+      utterance.pitch = 1.0;
+      
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // Email Settings variables
+    let hasEmailCredentials = false;
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      
+      let icon = '<i class="fa-solid fa-info-circle" style="color: var(--color-cyan);"></i>';
+      if (type === 'success') {
+        icon = '<i class="fa-solid fa-circle-check" style="color: var(--color-green);"></i>';
+        toast.style.background = 'rgba(16, 185, 129, 0.95)';
+      } else if (type === 'error') {
+        icon = '<i class="fa-solid fa-circle-exclamation" style="color: var(--color-danger);"></i>';
+        toast.style.background = 'rgba(239, 68, 68, 0.95)';
+      } else if (type === 'warning') {
+        icon = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--color-warning);"></i>';
+        toast.style.background = 'rgba(245, 158, 11, 0.95)';
+      }
+      
+      toast.innerHTML = `${icon} <span style="margin-left: 5px;">${message}</span>`;
+      container.appendChild(toast);
+      
+      // Auto remove toast after 4s
+      setTimeout(() => {
+        toast.style.animation = 'toast-in 0.3s ease-in reverse';
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 4000);
+    }
+
+    function loadEmailSettings() {
+      fetch('/api/settings/email')
+        .then(res => res.json())
+        .then(data => {
+          let localReceiver = localStorage.getItem('email_receiver');
+          let localAutosend = localStorage.getItem('email_autosend');
+          
+          if (localReceiver === null) {
+            localReceiver = data.receiver_email || "";
+            localStorage.setItem('email_receiver', localReceiver);
+          }
+          if (localAutosend === null) {
+            localAutosend = String(data.auto_send || false);
+            localStorage.setItem('email_autosend', localAutosend);
+          }
+          
+          document.getElementById('email-receiver-input').value = localReceiver;
+          document.getElementById('email-autosend-input').checked = (localAutosend === 'true');
+          hasEmailCredentials = data.has_credentials || false;
+          
+          const warning = document.getElementById('email-credentials-warning');
+          if (!hasEmailCredentials) {
+            warning.style.display = 'block';
+          } else {
+            warning.style.display = 'none';
+          }
+        })
+        .catch(err => console.error("Error loading email settings:", err));
+    }
+
+    function openEmailSettings() {
+      loadEmailSettings();
+      document.getElementById('email-settings-modal').style.display = 'flex';
+    }
+
+    function closeEmailSettings() {
+      document.getElementById('email-settings-modal').style.display = 'none';
+    }
+
+    function saveEmailSettings() {
+      const email = document.getElementById('email-receiver-input').value.trim();
+      const autosend = document.getElementById('email-autosend-input').checked;
+      
+      localStorage.setItem('email_receiver', email);
+      localStorage.setItem('email_autosend', String(autosend));
+      
+      closeEmailSettings();
+      showToast("郵件通知設定已儲存於本機裝置！", "success");
+    }
+
+    function sendTestEmail() {
+      const receiver = document.getElementById('email-receiver-input').value.trim();
+      if (!receiver) {
+        showToast("請先輸入收件信箱！", "warning");
+        return;
+      }
+      
+      if (!activeProductData) {
+        // Use mock test data if no scan record is active yet
+        activeProductData = {
+          name: "測試藥品 (Test Medication)",
+          brand: "系統測試",
+          category: "系統測試通知",
+          dosage: "每次1粒，每日一次",
+          time: "飯後服用",
+          warnings: ["這是一封測試用藥通知信，確認您的郵件伺服器設定運作正常。"]
+        };
+      }
+      
+      showToast("正在嘗試發送測試信，請稍候...", "info");
+      
+      const emailData = Object.assign({}, activeProductData, { receiver_email: receiver });
+      
+      fetch('/api/send_email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailData)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showToast(data.error, "error");
+        } else {
+          showToast(`測試用藥通知信已成功發送至 ${receiver}！`, "success");
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast("發送測試信失敗，請確認伺服器連線與 SMTP 設定。", "error");
+      });
+    }
+
+  </script>
+</body>
+</html>
