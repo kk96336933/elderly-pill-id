@@ -676,4 +676,6 @@ def trigger_email():
         return jsonify({"error": "信件發送失敗，請確認 SMTP 設定、網路連線或是否使用了正確的 App 密碼。"}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    # 啟動 Flask，優先讀取雲端平台的動態 PORT
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
